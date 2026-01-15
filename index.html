@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Alerta JW - Qualidade</title>
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+    <style>
+        :root {
+            --primary: #002f6c;
+            --accent: #ffcc00;
+            --error: #ea4335;
+            --bg: #f4f7f9;
+        }
+
+        body { 
+            font-family: 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+            background: var(--bg); 
+            margin: 0; 
+            padding: 15px; 
+            display: flex; 
+            justify-content: center; 
+            align-items: flex-start;
+        }
+
+        .box { 
+            width: 100%; 
+            max-width: 500px; 
+            background: white; 
+            border: 5px solid var(--accent); 
+            border-radius: 25px; 
+            padding: 25px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+            box-sizing: border-box;
+        }
+
+        .header { 
+            display: flex; 
+            align-items: center; 
+            justify-content: space-between;
+            margin-bottom: 25px; 
+        }
+
+        .logo { 
+            font-size: 42px; 
+            font-weight: 900; 
+            color: var(--primary); 
+            letter-spacing: -2px;
+        }
+
+        .logo span { color: var(--accent); }
+
+        .title { 
+            background: var(--accent);
+            color: var(--primary);
+            padding: 8px 15px;
+            border-radius: 50px;
+            font-weight: 800;
+            font-size: 14px;
+            text-transform: uppercase;
+            text-align: center;
+        }
+
+        .row { 
+            display: flex; 
+            gap: 15px; 
+            margin-bottom: 15px; 
+        }
+
+        .group { 
+            display: flex; 
+            flex-direction: column; 
+            margin-bottom: 15px;
+            flex: 1;
+        }
+
+        label { 
+            font-weight: 800; 
+            font-size: 11px; 
+            color: var(--primary);
+            margin-bottom: 6px; 
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+
+        input, textarea { 
+            padding: 14px; 
+            border: 2px solid #eee; 
+            border-radius: 12px; 
+            font-size: 16px; /* Evita zoom automático no iPhone */
+            width: 100%; 
+            box-sizing: border-box; 
+            background: #fafafa;
+            transition: 0.3s;
+        }
+
+        input:focus, textarea:focus {
+            border-color: var(--accent);
+            background: #fff;
+            outline: none;
+        }
+
+        .upload-box {
+            border: 2px dashed #ccc;
+            padding: 15px;
+            border-radius: 12px;
+            background: #fdfdfd;
+            text-align: center;
+        }
+
+        .btn { 
+            width: 100%; 
+            padding: 20px; 
+            background: var(--error); 
+            color: white; 
+            border: none; 
+            border-radius: 15px; 
+            font-weight: 900; 
+            font-size: 18px; 
+            text-transform: uppercase; 
+            cursor: pointer; 
+            margin-top: 10px;
+            box-shadow: 0 5px 15px rgba(234, 67, 53, 0.3);
+            transition: 0.3s;
+        }
+
+        .btn:active { transform: scale(0.98); }
+        .btn:disabled { background: #ccc; box-shadow: none; }
+
+        /* Ajuste para telas muito pequenas */
+        @media (max-width: 400px) {
+            .row { flex-direction: column; gap: 0; }
+            .box { padding: 15px; }
+        }
+    </style>
+</head>
+<body>
+<div class="box">
+    <div class="header">
+        <div class="logo">N<span>.</span></div>
+        <div class="title">Alerta de Qualidade</div>
+    </div>
+    
+    <form id="formJW">
+        <div class="row">
+            <div class="group"><label>📅 Data</label><input type="date" id="data" required></div>
+            <div class="group"><label>🔢 Item / Lote</label><input type="text" id="item" placeholder="Ex: 4055" required></div>
+        </div>
+        
+        <div class="group">
+            <label>🚨 Descrição da Ocorrência</label>
+            <textarea id="ocorrencia" rows="4" placeholder="Descreva o problema de qualidade..." required></textarea>
+        </div>
+        
+        <div class="group">
+            <label>📸 Fotos de Evidência</label>
+            <div class="upload-box">
+                <input type="file" id="fotos" accept="image/*" multiple>
+            </div>
+        </div>
+        
+        <button type="button" class="btn" id="btn" onclick="enviar()">Enviar Alerta</button>
+    </form>
+</div>
+
+<script>
+    (function(){ emailjs.init("aPEKFF6QbRnclt5n4"); })();
+
+    async function enviar() {
+        const btn = document.getElementById('btn');
+        const form = document.getElementById('formJW');
+        
+        if(!form.checkValidity()) { 
+            alert("⚠️ Por favor, preencha todos os campos obrigatórios."); 
+            return; 
+        }
+        
+        btn.disabled = true; 
+        btn.innerText = "⏳ ENVIANDO...";
+
+        let linksHtml = "";
+        const files = document.getElementById('fotos').files;
+        
+        // Upload para Cloudinary
+        for (let f of files) {
+            const fd = new FormData();
+            fd.append("file", f);
+            fd.append("upload_preset", "ml_default"); // Usando o preset ml_default que está ativo
+            
+            try {
+                const res = await fetch("https://api.cloudinary.com/v1_1/DHPVTXJJW/image/upload", { method: "POST", body: fd });
+                const d = await res.json();
+                if(d.secure_url) {
+                    linksHtml += `<div style="margin-bottom:8px;"><a href="${d.secure_url}" target="_blank" style="color: #002f6c; font-weight: bold; text-decoration: none; background: #eee; padding: 5px 10px; border-radius: 5px; display: inline-block;">🖼️ Ver Foto Anexada</a></div>`;
+                }
+            } catch (e) { 
+                console.error("Erro no upload:", e); 
+            }
+        }
+
+        const params = {
+            data: document.getElementById('data').value.split('-').reverse().join('/'),
+            item: document.getElementById('item').value,
+            ocorrencia: document.getElementById('ocorrencia').value,
+            links_fotos: linksHtml || "Nenhuma foto anexada."
+        };
+
+        // Envio pelo EmailJS
+        emailjs.send('service_f8m5n8r', 'template_xi1y9ga', params)
+            .then(() => { 
+                alert("✅ Alerta de Qualidade enviado com sucesso!"); 
+                location.reload(); 
+            })
+            .catch((err) => { 
+                alert("❌ Erro ao enviar. Verifique sua conexão."); 
+                console.error(err);
+                btn.disabled = false; 
+                btn.innerText = "Enviar Alerta"; 
+            });
+    }
+</script>
+</body>
+</html>
